@@ -105,20 +105,25 @@ local function parse_mafia_bonuslist(bonuslist)
 		["Stench Resistance"] = "Stench Resistance",
 		["Slime Resistance"] = "Slime Resistance",
 
+		["Spell Damage"] = "Spell Damage",
+		["Spell Damage Percent"] = "Spell Damage %",
 		["Cold Spell Damage"] = "Damage to Cold Spells",
 		["Hot Spell Damage"] = "Damage to Hot Spells",
 		["Sleaze Spell Damage"] = "Damage to Sleaze Spells",
 		["Spooky Spell Damage"] = "Damage to Spooky Spells",
 		["Stench Spell Damage"] = "Damage to Stench Spells",
+		["Spell Critical Percent"] = "Critical Spell %",
 
+		["Weapon Damage"] = "Weapon Damage",
+		["Weapon Damage Percent"] = "Weapon Damage %",
 		["Cold Damage"] = "Cold Damage",
 		["Hot Damage"] = "Hot Damage",
 		["Sleaze Damage"] = "Sleaze Damage",
 		["Spooky Damage"] = "Spooky Damage",
 		["Stench Damage"] = "Stench Damage",
+		["Critical Hit Percent"] = "Critical Hit %",
 
-		["Spell Damage"] = "Spell Damage",
-		["Weapon Damage"] = "Weapon Damage",
+		["Ranged Damage"] = "Ranged Damage",
 
 		["Maximum HP"] = "Maximum HP",
 		["Maximum MP"] = "Maximum MP",
