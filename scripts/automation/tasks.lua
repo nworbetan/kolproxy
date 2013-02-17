@@ -327,17 +327,31 @@ mark m_done
 			end
 			pt = get_page("/place.php", { whichplace = "orc_chasm", action = "bridge" .. pieces })
 			if pt:contains("have to check out that lumber camp down there") then
-				return {
-					message = "get bridge parts (" .. pieces .. ")",
-					fam = "Slimeling",
-					buffs = { "Fat Leon's Phat Loot Lyric", "Spirit of Garlic", "Leash of Linguini", "Empathy" },
-					bonus_target = { "item" },
-					minmp = 30,
-					action = adventure {
-						zoneid = 295,
-						macro_function = macro_noodleserpent,
+				if have_item("smut orc keepsake box") then
+					return {
+						message = "use keepsake box",
+						fam = "Slimeling",
+						nobuffing = true,
+						minmp = 0,
+						action = function()
+							local c = count_item("smut orc keepsake box")
+							use_item("smut orc keepsake box")()
+							did_action = count_item("smut orc keepsake box") == c - 1
+						end
 					}
-				}
+				else
+					return {
+						message = "get bridge parts (" .. pieces .. ")",
+						fam = "Slimeling",
+						buffs = { "Fat Leon's Phat Loot Lyric", "Spirit of Garlic", "Leash of Linguini", "Empathy" },
+						bonus_target = { "item" },
+						minmp = 30,
+						action = adventure {
+							zoneid = 295,
+							macro_function = macro_noodleserpent,
+						}
+					}
+				end
 			else
 				return {
 					message = "check bridge",
@@ -518,11 +532,11 @@ mark m_done
 						if familiarid() ~= 72 then
 							switch_familiarid(1)
 						end
-						if get_resistance_levels().stench >= 4 and (familiarid() == 1 or familiarid() == 72) and estimate_modifier_bonuses().item >= 50 and have_item("jar of oil") and estimate_modifier_bonuses().initiative >= 40 then
+						if get_resistance_levels().stench >= 4 and (familiarid() == 1 or familiarid() == 72) and estimate_modifier_bonuses()["Item Drops from Monsters"] >= 50 and have_item("jar of oil") and estimate_modifier_bonuses()["Combat Initiative"] >= 40 then
 							session["__script.automate twin peak"] = "yes"
 							did_action = true
 						else
-							stop "TODO: solve twin peak mystery"
+							stop "TODO: solve twin peak mystery (or get 4+ stench resist, +50% items, jar of oil, and +40% init and run again)"
 						end
 					end
 				}

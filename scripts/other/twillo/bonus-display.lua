@@ -5,26 +5,49 @@ register_setting {
 	default_level = "standard",
 }
 
-function estimate_modifier_bonuses()
-	local bonuses = {}
-	add_modifier_bonuses(bonuses, get_equipment_bonuses())
-	add_modifier_bonuses(bonuses, get_outfit_bonuses())
-	add_modifier_bonuses(bonuses, get_buff_bonuses())
+function estimate_companion_bonuses()
+        local jarlcompanion = tonumber(status().jarlcompanion)
+	if not jarlcompanion then return {} end
+	local working_lunch = have_skill("Working Lunch") and 1 or 0
+        if jarlcompanion == 1 then
+		return { ["Item Drops from Monsters"] = 50 + 25 * working_lunch }
+        elseif jarlcompanion == 2 then
+		return { ["Combat Initiative"] = 50 + 25 * working_lunch }
+        elseif jarlcompanion == 3 then
+		return {}
+        elseif jarlcompanion == 4 then
+		return { ["Monster Level"] = 20 + 10 * working_lunch }
+	else
+		return {}
+        end
+end
 
-	add_modifier_bonuses(bonuses, { combat = estimate_other_combat() })
-	add_modifier_bonuses(bonuses, { item = estimate_other_item() })
-	add_modifier_bonuses(bonuses, { ml = estimate_other_ml() })
-	add_modifier_bonuses(bonuses, { initiative = estimate_other_init() })
-	add_modifier_bonuses(bonuses, { meat = estimate_other_meat() })
+function estimate_other_bonuses()
+	local bonuses = {}
+	add_modifier_bonuses(bonuses, { ["Monsters will be more attracted to you"] = estimate_other_combat() })
+	add_modifier_bonuses(bonuses, { ["Item Drops from Monsters"] = estimate_other_item() })
+	add_modifier_bonuses(bonuses, { ["Monster Level"] = estimate_other_ml() })
+	add_modifier_bonuses(bonuses, { ["Combat Initiative"] = estimate_other_init() })
+	add_modifier_bonuses(bonuses, { ["Meat from Monsters"] = estimate_other_meat() })
 	add_modifier_bonuses(bonuses, { ["Weapon Damage %"] = estimate_other_percent_weapon_damage() })
 	add_modifier_bonuses(bonuses, { ["Spell Damage %"] = estimate_other_percent_spell_damage() })
+	return bonuses
+end
 
-	if bonuses.combat then
-		bonuses.combat = adjust_combat(bonuses.combat)
+function estimate_modifier_bonuses()
+	local bonuses = {}
+	add_modifier_bonuses(bonuses, estimate_equipment_bonuses())
+	add_modifier_bonuses(bonuses, estimate_outfit_bonuses())
+	add_modifier_bonuses(bonuses, estimate_buff_bonuses())
+	add_modifier_bonuses(bonuses, estimate_companion_bonuses())
+	add_modifier_bonuses(bonuses, estimate_other_bonuses())
+
+	if bonuses["Monsters will be more attracted to you"] then
+		bonuses["Monsters will be more attracted to you"] = adjust_combat(bonuses["Monsters will be more attracted to you"])
 	end
 
 	-- TODO: Separate between combat and underwater combat?
-	add_modifier_bonuses(bonuses, { combat = estimate_underwater_combat() })
+	add_modifier_bonuses(bonuses, { ["Monsters will be more attracted to you"] = estimate_underwater_combat() })
 
 	-- TODO: Do something about initiative ML penalty here?
 
@@ -35,14 +58,14 @@ add_printer("/charpane.php", function()
 	if not setting_enabled("show modifier estimates") then return end
 
 	local bonuses = estimate_modifier_bonuses()
-	local ml_init_penalty = estimate_init_penalty(bonuses.ml or 0)
+	local ml_init_penalty = estimate_init_penalty(bonuses["Monster Level"] or 0)
 
-	local com = bonuses.combat or 0
-	local item = bonuses.item or 0
-	local ml = bonuses.ml or 0
-	local initial_init = bonuses.initiative or 0
+	local com = bonuses["Monsters will be more attracted to you"] or 0
+	local item = bonuses["Item Drops from Monsters"] or 0
+	local ml = bonuses["Monster Level"] or 0
+	local initial_init = bonuses["Combat Initiative"] or 0
 	local adjusted_init = initial_init - ml_init_penalty
-	local meat = bonuses.meat or 0
+	local meat = bonuses["Meat from Monsters"] or 0
 
 	local uncertaintystr = ""
 	if not have_cached_data() then

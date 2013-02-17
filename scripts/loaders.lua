@@ -53,6 +53,7 @@ load_file("zone", "zones/lvl12.lua")
 load_file("zone", "zones/lair.lua")
 load_file("zone", "zones/nemesis.lua")
 load_file("zone", "zones/mountains.lua")
+load_file("zone", "zones/mine-prediction.lua")
 load_file("zone", "zones/beanstalk.lua")
 load_file("zone", "zones/beach.lua")
 load_file("zone", "zones/rats.lua")
@@ -134,6 +135,7 @@ load_file("interface", "other/nion/basement.lua")
 
 load_file("interface", "other/chickencha/lvl12.lua")
 load_file("interface", "other/chickencha/chess.lua")
+load_file("interface", "other/chickencha/chibibuddy.lua")
 
 load_file("interface", "other/superbachelor/blank-out.lua")
 
