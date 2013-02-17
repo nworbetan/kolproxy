@@ -16,6 +16,8 @@ function estimate_modifier_bonuses()
 	add_modifier_bonuses(bonuses, { ml = estimate_other_ml() })
 	add_modifier_bonuses(bonuses, { initiative = estimate_other_init() })
 	add_modifier_bonuses(bonuses, { meat = estimate_other_meat() })
+	add_modifier_bonuses(bonuses, { ["Weapon Damage %"] = estimate_other_percent_weapon_damage() })
+	add_modifier_bonuses(bonuses, { ["Spell Damage %"] = estimate_other_percent_spell_damage() })
 
 	if bonuses.combat then
 		bonuses.combat = adjust_combat(bonuses.combat)

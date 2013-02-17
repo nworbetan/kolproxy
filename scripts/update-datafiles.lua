@@ -136,6 +136,7 @@ local function parse_mafia_bonuslist(bonuslist)
 		["MP Regen Max"] = "Regenerate maximum MP per adventure",
 
 		-- TODO: add more modifiers
+		-- TODO: (Bonus for <class> only)
 	}
 
 	local bonuses = {}
@@ -278,7 +279,9 @@ function parse_items()
 			items[name] = { id = itemid }
 			lowercasemap[name:lower()] = name
 			for _, u in ipairs(split_commaseparated(itemusestr or "")) do
-				items[name].equipment_slot = itemslots[u]
+				if itemslots[u] then
+					items[name].equipment_slot = itemslots[u]
+				end
 			end
 		end
 	end
@@ -318,7 +321,7 @@ function parse_items()
 
 	for l in io.lines("cache/files/equipment.txt") do
 		local tbl = split_tabbed_line(l)
-		local name, power, req = tbl[1], tonumber(tbl[2]), tbl[3]
+		local name, power, req, item_type = tbl[1], tonumber(tbl[2]), tbl[3], tbl[4]
 		if name and req and not blacklist[name] then
 			if items[name] then
 				local reqtbl = {}
@@ -328,10 +331,21 @@ function parse_items()
 				if req ~= "none" and not next(reqtbl) then
 					hardwarn("unknown equip requirement", req, "for", name)
 				end
-				-- Mafia data files frequently show no equipment requirements as e.g. "Mus: 0" instead of "none"
-				for a, b in pairs(reqtbl) do
-					if b == 0 then
-						reqtbl[a] = nil
+				if items[name].equipment_slot == "weapon" then
+					for a, b in pairs(reqtbl) do
+						if a == "muscle" then
+							items[name].weapon_reach = "melee"
+						elseif a == "mysticality" then
+							items[name].weapon_reach = "melee"
+						elseif a == "moxie" then
+							items[name].weapon_reach = "ranged"
+						end
+					end
+					items[name].weapon_hands = tonumber(item_type:match("([0-9]+)-handed"))
+					items[name].weapon_class = item_type:match("handed ([a-z\.\?]+)")
+				elseif items[name].equipment_slot == "offhand" then
+					if item_type == "shield" then
+						items[name].is_shield = "true"
 					end
 				end
 				items[name].equip_requirement = reqtbl

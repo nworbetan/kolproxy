@@ -141,6 +141,9 @@ load_file("chat", "other/add-log-notes.lua")
 
 load_file("interface", "other/lua-console.lua")
 
+load_file("other", "other/nworbetan/helper-functions.lua")
+load_file("other", "other/nworbetan/predict-dmg.lua")
+
 for _, f in ipairs(list_custom_autoload_script_files()) do
 	load_file("custom autoload", "custom-autoload/" .. f)
 end
