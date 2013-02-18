@@ -14,11 +14,18 @@ function datafile(name)
 end
 
 local itemid_name_lookup = {}
+local monster_image_lookup = {}
 function reset_datafile_cache()
 	datafile_cache = {}
 	itemid_name_lookup = {}
 	for x, y in pairs(datafile("items")) do
 		itemid_name_lookup[y.id] = x
+	end
+	for monster in table.values(datafile("monsters")) do
+		local image = monster.Stats.Image
+		if image then
+			monster_image_lookup[image] = monster
+		end
 	end
 end
 
@@ -40,6 +47,7 @@ end
 
 function maybe_get_itemid(name)
 	if name == "Staff of the Healthy Breakfast" then return 6258 end -- TODO: HACK!
+	if name == "mediocre lager" then return 6215 end -- TODO: HACK!
 
 	if name == nil then
 		return nil
@@ -71,6 +79,11 @@ end
 function maybe_get_itemdata(name)
 	local id = get_itemid(name)
 	return get_item_data_by_id(id)
+end
+
+
+function get_monster_by_image(image)
+	return monster_image_lookup[image]
 end
 
 
@@ -114,8 +127,8 @@ function intercept_warning(warning)
 	if not warning.norepeat then
 		extratext = [[<p><a href="]]..raw_make_href(requestpath, parse_params_raw(input_params))..[[">I fixed it, try again.</a></p>]]
 	end
-	local session_disable_msg = [[<p><small><a href="#" onclick="var link = this; $.post('custom-settings', { pwd: ']] .. session.pwd .. [[', action: 'set state', name: 'warning-]] .. warning.id .. [[', stateset: 'session', value: 'skip', ajax: 1 }, function (res) { link.style.color = 'gray'; link.innerHTML = '(Disabled, trying again...)'; location.href = ']]..raw_make_href(requestpath, parse_params_raw(input_params))..[[' }); return false;" style="color: ]] .. (warning.customdisablecolor or "darkorange") .. [[;">]] .. (warning.customdisablemsg or "I am sure! Do it anyway and disable this warning until I log out.") .. [[</a></small></p>]]
-	local one_turn_disable_msg = [[<p><small><a href="#" onclick="var link = this; $.post('custom-settings', { pwd: ']] .. session.pwd .. [[', action: 'set state', name: 'warning-turn-]] .. turnsthisrun() .. [[-]] .. warning.id .. [[', stateset: 'session', value: 'skip', ajax: 1 }, function (res) { link.style.color = 'gray'; link.innerHTML = '(Disabled, trying again...)'; location.href = ']]..raw_make_href(requestpath, parse_params_raw(input_params))..[[' }); return false;" style="color: ]] .. (warning.customdisablecolor or "darkorange") .. [[;">]] .. (warning.customdisablemsg or "I am sure! Do it for this turn.") .. [[</a></small></p>]]
+	local session_disable_msg = [[<p><small><a href="#" onclick="var link = this; $.post('custom-settings', { pwd: ']] .. session.pwd .. [[', action: 'set state', name: 'warning-]] .. warning.id .. [[', stateset: 'session', value: 'skip', ajax: 1 }, function(res) { link.style.color = 'gray'; link.innerHTML = '(Disabled, trying again...)'; location.href = ']]..raw_make_href(requestpath, parse_params_raw(input_params))..[[' }); return false;" style="color: ]] .. (warning.customdisablecolor or "darkorange") .. [[;">]] .. (warning.customdisablemsg or "I am sure! Do it anyway and disable this warning until I log out.") .. [[</a></small></p>]]
+	local one_turn_disable_msg = [[<p><small><a href="#" onclick="var link = this; $.post('custom-settings', { pwd: ']] .. session.pwd .. [[', action: 'set state', name: 'warning-turn-]] .. turnsthisrun() .. [[-]] .. warning.id .. [[', stateset: 'session', value: 'skip', ajax: 1 }, function(res) { link.style.color = 'gray'; link.innerHTML = '(Disabled, trying again...)'; location.href = ']]..raw_make_href(requestpath, parse_params_raw(input_params))..[[' }); return false;" style="color: ]] .. (warning.customdisablecolor or "darkorange") .. [[;">]] .. (warning.customdisablemsg or "I am sure! Do it for this turn.") .. [[</a></small></p>]]
 	if warning.customdisablemsg then
 		one_turn_disable_msg = ""
 	end
@@ -375,7 +388,7 @@ function load_script_files(env)
 	local global_env = {}
 	local function load_file(category, name)
 		local warn = true
-		run_file_with_environment(name, global_env, env, function (t, k, filename)
+		run_file_with_environment(name, global_env, env, function(t, k, filename)
 			if (warn and k ~= "register_setting" and k ~= "load_datafile" and k ~= "setup_turnplaying_script") or (k == "character" and not filename:contains("settings-page")) then
 --				print("Warning: using global variable", k, "in", filename)
 -- 				print(debug.traceback())
@@ -424,7 +437,7 @@ function run_functions(p, pagetext, run)
 	original_page_text = pagetext
 
 	if p == "/fight.php" then
-		pagetext = pagetext:gsub([[(<td[^>]-><img src="http://images.kingdomofloathing.com/itemimages/)([^"]+.gif)(" width=30 height=30 alt="[^"]+" title=")([^"]+)("></td><td[^>]->)(.-)(</td></tr>)]], function (pre, itemimage, mid, title, td, msg, post)
+		pagetext = pagetext:gsub([[(<td[^>]-><img src="http://images.kingdomofloathing.com/itemimages/)([^"]+.gif)(" width=30 height=30 alt="[^"]+" title=")([^"]+)("></td><td[^>]->)(.-)(</td></tr>)]], function(pre, itemimage, mid, title, td, msg, post)
 			item_image = itemimage
 			item_name = title
 			if item_name then
@@ -436,7 +449,7 @@ function run_functions(p, pagetext, run)
 			return pre .. itemimage .. mid .. title .. td .. msg .. post
 		end)
 
-		pagetext = pagetext:gsub([[(<!%-%-familiarmessage%-%-><center><table>.-</table></center>)]], function (msg)
+		pagetext = pagetext:gsub([[(<!%-%-familiarmessage%-%-><center><table>.-</table></center>)]], function(msg)
 			familiarmessage_picture = msg:match([[<!%-%-familiarmessage%-%-><center><table><tr><td align=center valign=center><img src="http://images.kingdomofloathing.com/itemimages/([^"]+).gif" width=30 height=30></td>]])
 			if familiarmessage_picture then
 				msg = run("familiar message: " .. familiarmessage_picture, msg)
@@ -447,7 +460,7 @@ function run_functions(p, pagetext, run)
 	end
 
 	if text:contains("You acquire an item") then
-		pagetext = pagetext:gsub([[<center><table class="item" style="float: none" rel="[^"]*"><tr><td><img src="http://images.kingdomofloathing.com/itemimages/[^"]+.gif" alt="[^"]*" title="[^"]*" class=hand onClick='descitem%([0-9]+%)'></td><td valign=center class=effect>You acquire .-</td></tr></table></center>]], function (droptext)
+		pagetext = pagetext:gsub([[<center><table class="item" style="float: none" rel="[^"]*"><tr><td><img src="http://images.kingdomofloathing.com/itemimages/[^"]+.gif" alt="[^"]*" title="[^"]*" class=hand onClick='descitem%([0-9]+%)'></td><td valign=center class=effect>You acquire .-</td></tr></table></center>]], function(droptext)
 			item_image = droptext:match([[src="http://images.kingdomofloathing.com/itemimages/([^"]+).gif"]])
 			item_name = droptext:match([[title="([^"]*)"]])
 			msg = droptext

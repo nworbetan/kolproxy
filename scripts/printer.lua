@@ -34,9 +34,9 @@ if path == "/login.php" then
 --		[ [[<input class=button type=submit value="Log In" name=submitbutton id=submitbutton>]] ] = [[<input class="button" type="submit" value="Log In" style="color: gray" name="submitbutton" id="submitbutton" disabled="disabled">]],
 --		["<font size=1>If you've forgotten your password"] = [[<div id="jswarning" style="color: red">You have to turn on javascript, otherwise you'll submit your password in cleartext!</div><script type="text/javascript">if (md5s) { document.getElementById('jswarning').style.display = 'none'; document.getElementById('submitbutton').value = 'Log In'; document.getElementById('submitbutton').disabled = ''; document.getElementById('submitbutton').style.color = 'black'; }</script>%0]],
 	}
-	if current_version ~= "3.8-prealpha" then
+	if current_version ~= "3.8-prealpha-2" and current_version ~= "3.8-prealpha" then
 		mods["/login.php"]["An Adventurer is You!<br>"] = [[An Adventurer is You!<br><a href="http://www.houeland.com/kolproxy/wiki/Installation" target="_blank" style="color: red; text-decoration: none;">{ Kolproxy v]]..current_version..[[ incorrect installation. }</a><br><a href="http://www.houeland.com/kolproxy/wiki/Installation" target="_blank" style="color: red; font-size: smaller;">{ Click here to download a working version. }</a>]]
-	elseif latest_version and current_version ~= latest_version and latest_version ~= "3.7-2" then
+	elseif latest_version and current_version ~= latest_version and latest_version ~= "3.8-prealpha" then
 		print("current version", current_version, "latest version", latest_version)
 		mods["/login.php"]["An Adventurer is You!<br>"] = [[An Adventurer is You!<br><a href="http://www.houeland.com/kolproxy/wiki/Installation" target="_blank" style="color: darkorange; text-decoration: none;">{ Kolproxy v]]..current_version..[[, latest version is v]]..latest_version..[[ }</a><br><a href="http://www.houeland.com/kolproxy/wiki/Installation" target="_blank" style="color: darkorange; font-size: smaller;">{ Click here to upgrade. }</a>]]
 	else
@@ -120,7 +120,7 @@ kolproxy_log_time_interval("do run_functions", function()
 if path == "/charpane.php" and text:contains("inf_small.gif") then
 	-- Hack for valhalla
 else
-	text = run_functions(path, text, function (target, pt)
+	text = run_functions(path, text, function(target, pt)
 		for _, x in ipairs(printers[target] or {}) do
 			getfenv(x.f).text = pt
 -- 			kolproxy_log_time_interval("run:" .. tostring(x.scriptname), x.f)
