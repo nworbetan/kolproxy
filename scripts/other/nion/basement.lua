@@ -87,3 +87,8 @@ add_automator("/basement.php", function()
 		text = text:gsub([[<br><p><a href="fernruin.php">]], [[<center><div style="color: green">]] .. challenge_summary .. [[</div></center><p><a href="fernruin.php">]], 1)
 	end
 end)
+
+-- HACK
+function basement_level()
+	return 42
+end

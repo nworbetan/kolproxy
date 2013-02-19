@@ -404,8 +404,9 @@ local function parse_monster_stats(stats)
 			if name and value then
 				local expr = value:match("^%[(.*)%]$")
 				if expr then
-					-- TODO: process expressions
-					value = "?"
+					--do nothing for now; expr are evaluated in getMonsterData()
+					--although I suppose the string substitutions could happen here
+					--print(value)
 				elseif tonumber(value) then
 					value = tonumber(value)
 				elseif name == "Meat" then

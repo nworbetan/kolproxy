@@ -94,15 +94,37 @@ function getMonsterData(monster_name, fight_text)
 
 	local modifiers = estimate_modifier_bonuses()
 	local ml = modifiers["Monster Level"] or 0
-	if monster_data_name == "tomb rat king" then ml = 0 end -- ML doesn't get reapplied when using rat tangles
 
 	for a, b in pairs(monster.Stats or {}) do
-		if ml_increases[a] and tonumber(b) then
-			monster.Stats[a] = math.max(tonumber(b) + ml, 1)
+		if ml_increases[a] then
+			if tonumber(b) then
+				monster.Stats[a] = math.max(tonumber(b) + ml, 1)
+			elseif b:sub(1, 1) == "[" and b:sub(-1) == "]" then
+				if b:match("^%[([0-9]+)%]$") then
+					-- b == [N] means the stat is approximately N, and +-ML has no effect
+					monster.Stats[a] = b:match("^%[([0-9]+)%]$")
+				else
+					--print(monster_name .. " " .. a .. ": " .. b)
+					local expr = b:match("^%[(.+)%]$")
+					-- TODO test Baron Von Ratsworth carefully,
+					-- this may need to be current_ascension_number()?
+					expr = expr:gsub("A", "ascensions_count()")
+					-- HACK basement_level() returns 42
+					expr = expr:gsub("BL", "basement_level()")
+					expr = expr:gsub("HP", "maxhp()")
+					expr = expr:gsub("ML", "estimate_modifier_bonuses()[\"Monster Level\"]")
+					expr = expr:gsub("MOX", "buffedmoxie()")
+					expr = expr:gsub("MUS", "buffedmuscle()")
+					expr = expr:gsub("ceil", "math.ceil")
+					expr = expr:gsub("min", "math.min")
+					--print(monster_name .. " " .. a .. ": " .. expr)
+					monster.Stats[a] = setfenv(loadstring("return " .. expr), getfenv())()
+				end
+			end
 		end
 	end
 
-	--In a bees hate you, monster's with b in their names get increased by 20% per b
+	--In a bees hate you, monsters with b in their names get increased by 20% per b
 	--This is AFTER ML is applied
 	if ascensionpathid() == 4 then
 		monster.Stats = beesIncreaser(monster_name, monster.Stats)

@@ -54,6 +54,30 @@ function get_offhand_type(name)
 	return oh_type
 end
 
+function get_crit_multiplier()
+	if have_skill("Legendary Luck") then
+		return 4
+	else
+		return 2
+	end
+end
+
+function get_pasta_tuning()
+	if have_intrinsic("Spirit of Cayenne") then
+		return "hot"
+	elseif have_intrinsic("Spirit of Peppermint") then
+		return "cold"
+	elseif have_intrinsic("Spirit of Garlic") then
+		return "stench"
+	elseif have_intrinsic("Spirit of Wormwood") then
+		return "spooky"
+	elseif have_intrinsic("Spirit of Bacon Grease") then
+		return "sleaze"
+	else
+		return "no_element"
+	end
+end
+
 function get_current_player_state()
 	local estimated_bonuses = estimate_modifier_bonuses()
 	local state = {
@@ -73,7 +97,7 @@ function get_current_player_state()
 		stench_weapon_damage = estimated_bonuses["Stench Damage"] or 0,
 		-- TODO does "Critical Hit %" need a helper in estimate_modifier_bonuses() ?
 		crit_melee_chance = estimated_bonuses["Critical Hit %"] or 0,
-		crit_multiplier = 1, -- HACK yeah, this isn't quite right yet
+		crit_multiplier = get_crit_multiplier(),
 		mainhand_type = get_weapon_reach(get_equipped_item("weapon")),
 		mainhand_power = get_item_power(get_equipped_item("weapon")),
 		offhand_type = get_offhand_type(get_equipped_item("offhand")),
@@ -87,8 +111,7 @@ function get_current_player_state()
 		stench_spell_damage = estimated_bonuses["Damage to stench Spells"] or 0,
 		-- TODO does "Critical Spell %" need a helper in estimate_modifier_bonuses() ?
 		crit_spell_chance = estimated_bonuses["Critical Spell %"] or 0,
-		-- HACK FIXME 
-		spirit_of_what = no_element,
+		spirit_of_what = get_pasta_tuning(),
 		immaculately_seasoned = have_skill("Immaculate Seasoning"),
 		hero_of_the_half_shell = have_skill("Hero of the Half-Shell"),
 		damage_reduction = estimated_bonuses["Damage Reduction"] or 0,
@@ -108,7 +131,7 @@ function get_skill_data(name)
 end
 
 function get_monster_data(name)
-	-- HACK currently using get_monster_data() as a wrapper for getCurrentMonster()
+	-- HACK using get_monster_data() as a wrapper for getCurrentMonster()
 	--	this is because of lazyness more so than any other reason
 	local monster = {}
 	if name == "current" then
@@ -118,8 +141,8 @@ function get_monster_data(name)
 			defense = cmd["Stats"]["ModDef"],
 			hp = cmd["Stats"]["ModHP"],
 			initiative = 50,
-			def_element = "no_element",
-			off_element = "no_element",
+			element = cmd["Stats"]["Element"] or "no_element",
+			-- HACK can we get group size added to monsters.txt?
 			group_size = 1,
 			phylum = cmd["Stats"]["Phylum"]
 		}
@@ -131,8 +154,7 @@ function get_monster_data(name)
 		defense = 18,
 		hp = 100,
 		initiative = 50,
-		def_element = "no_element",
-		off_element = "no_element",
+		element = "no_element",
 		group_size = 1,
 		phylum = "hobo"
 	}]]
@@ -205,16 +227,32 @@ function estimate_other_spell_damage_percent()
 	return 0
 end
 
-add_printer("/fight.php", function()
-	local numbers = melee_damage(get_current_player_state(), get_skill_data("attack"), get_monster_data("current"))
-	local strung = "Attack damages: "
-	for i, n in ipairs(numbers) do
-		local spacer = ", "
-		if i == 1 then
-			spacer = ""
+function estimate_other_ranged_damage()
+	if have_skill("Disco Fever") and get_weapon_reach(get_equipped_item("weapon")) == "ranged" then
+		return math.min(15, level())
+	end
+	return 0
+end
+
+function estimate_other_spell_damage()
+	if get_pasta_tuning() ~= "no_element" then
+		return 10
+	end
+end
+
+--[[add_printer("/fight.php", function()
+	local numbers = melee_damage(get_current_player_state(), get_skill_data("Lunging Thrust-Smack"), get_monster_data("current"))
+	local function strung(table)
+		local s = ""
+		for i, n in ipairs(table) do
+			local spacer = ", "
+			if i <= 2 then
+				spacer = " "
+			end
+			s = s .. spacer .. n
 		end
-		strung = strung .. spacer .. n
+		return s
 	end
 	text = text:gsub("<div id='fightform' class='hideform'><p><center><table><a name=\"end\">",
-			function(x) return x .. strung end)
-end)
+			function(x) return x .. strung(numbers.normal) .. "<br>" .. strung(numbers.crit) end)
+end)]]
