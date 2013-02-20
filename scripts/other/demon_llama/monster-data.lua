@@ -13,17 +13,10 @@ function deepcopy(t)
 end
 
 local function parseMonsterNameIntoMafiaFormat(monsterName)
-	--mafia's table doesn't precede the names of the monsters
-	--with "a " or "an " or spaces, this function attempts to
-	--strip out those things
-	--mafia's table was also inconsistent with cases, 
+	--mafia's table was inconsistent with cases, 
 	--so I lowercased everything and will have to do so here as well
-	
-	local mafiaMonsterName = monsterName:lower()
 
-	mafiaMonsterName = mafiaMonsterName:gsub("^a ", "")
-	mafiaMonsterName = mafiaMonsterName:gsub("^an ", "")
-	mafiaMonsterName = mafiaMonsterName:gsub("^ ", "")
+	local mafiaMonsterName = monsterName:lower()
 
 	return mafiaMonsterName
 end
@@ -66,14 +59,14 @@ local monster_image_prefixes = {
 	slime5 = "slime5",
 }
 
-function getMonsterData(monster_name, fight_text)
+function buildCurrentFightMonsterDataCache(monster_name, fight_text)
 	local monster_data_name = parseMonsterNameIntoMafiaFormat(monster_name)
 	local monster = datafile("monsters")[monster_data_name]
 
 	if not monster then
 		local monster_image = fight_text:match([[<img id='monpic' src="http://images.kingdomofloathing.com/adventureimages/([^"]+)"]])
 		monster = get_monster_by_image(monster_image)
-		if not monster then
+		if monster_image and not monster then
 			for prefix, name in pairs(monster_image_prefixes) do
 				if monster_image:match("^" .. prefix) then
 					monster = datafile("monsters")[name]
@@ -96,31 +89,10 @@ function getMonsterData(monster_name, fight_text)
 	local ml = modifiers["Monster Level"] or 0
 
 	for a, b in pairs(monster.Stats or {}) do
-		if ml_increases[a] then
-			if tonumber(b) then
-				monster.Stats[a] = math.max(tonumber(b) + ml, 1)
-			elseif b:sub(1, 1) == "[" and b:sub(-1) == "]" then
-				if b:match("^%[([0-9]+)%]$") then
-					-- b == [N] means the stat is approximately N, and +-ML has no effect
-					monster.Stats[a] = b:match("^%[([0-9]+)%]$")
-				else
-					--print(monster_name .. " " .. a .. ": " .. b)
-					local expr = b:match("^%[(.+)%]$")
-					-- TODO test Baron Von Ratsworth carefully,
-					-- this may need to be current_ascension_number()?
-					expr = expr:gsub("A", "ascensions_count()")
-					-- HACK basement_level() returns 42
-					expr = expr:gsub("BL", "basement_level()")
-					expr = expr:gsub("HP", "maxhp()")
-					expr = expr:gsub("ML", "estimate_modifier_bonuses()[\"Monster Level\"]")
-					expr = expr:gsub("MOX", "buffedmoxie()")
-					expr = expr:gsub("MUS", "buffedmuscle()")
-					expr = expr:gsub("ceil", "math.ceil")
-					expr = expr:gsub("min", "math.min")
-					--print(monster_name .. " " .. a .. ": " .. expr)
-					monster.Stats[a] = setfenv(loadstring("return " .. expr), getfenv())()
-				end
-			end
+		if ml_increases[a] and tonumber(b) then
+			monster.Stats[a] = math.max(tonumber(b) + ml, 1)
+		elseif type(b) == "string" and b:match("^mafiaexpression:%[.*%]$") then
+			monster.Stats[a] = evaluate_mafiaexpression(b)
 		end
 	end
 
