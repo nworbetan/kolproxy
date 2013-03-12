@@ -30,9 +30,11 @@ function estimate_other_bonuses()
 	add_modifier_bonuses(bonuses, { ["Combat Initiative"] = estimate_other_init() })
 	add_modifier_bonuses(bonuses, { ["Meat from Monsters"] = estimate_other_meat() })
 	add_modifier_bonuses(bonuses, { ["Weapon Damage %"] = estimate_other_weapon_damage_percent() })
+	add_modifier_bonuses(bonuses, { ["Weapon Damage"] = estimate_other_weapon_damage() })
 	add_modifier_bonuses(bonuses, { ["Spell Damage %"] = estimate_other_spell_damage_percent() })
 	add_modifier_bonuses(bonuses, { ["Spell Damage"] = estimate_other_spell_damage() })
 	add_modifier_bonuses(bonuses, { ["Ranged Damage"] = estimate_other_ranged_damage() })
+	add_modifier_bonuses(bonuses, { ["Spooky Damage"] = estimate_other_spooky_damage() })
 	return bonuses
 end
 

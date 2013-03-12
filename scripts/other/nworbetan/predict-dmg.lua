@@ -1,12 +1,12 @@
-function melee_damage(player_state, skill, monster_stats)
+local function melee_damage(player_state, skill, monster_stats)
 	if skill["type"] ~= "melee" then
 		error("Not a valid melee damage skill: " .. skill["name"])
 	end
-
-	local mh_pwr = player_state["mainhand_power"]
+	local normal_damages = {}
+	local crit_damages = {}
 
 	local s_m_b = nil -- s_m_b = skill_muscle_bonus
-	if player_state["class"] == skill["class"] then
+	if player_state["class"] == skill["class"] and skill["skill_muscle_bonus"][2] then
 		s_m_b = skill["skill_muscle_bonus"][2]
 	else
 		s_m_b = skill["skill_muscle_bonus"][1]
@@ -30,6 +30,7 @@ function melee_damage(player_state, skill, monster_stats)
 	-- FIXME if off_diff < 0 and not skill["auto_hit"] then ???
 	-- off_diff = offensive difference
 	local off_diff = math.max(0, eff_mus - monster_stats["defense"])
+	--print("off_diff: " .. off_diff)
 
 	local elementable = {
 		cold = player_state["cold_weapon_damage"],
@@ -45,8 +46,19 @@ function melee_damage(player_state, skill, monster_stats)
 		end
 	end
 
-	-- TODO dual wielding, xxx_butt, ravenous pounce, etc
-	local additional_dmg = 0
+	-- FIXME add additional_dmg to ravenous pounce, etc in combat-skills.json
+	local add_skill_dmg = setfenv(loadstring("return " .. (skill["additional_dmg"] or "{0}")), getfenv())()
+
+	local oh_type = player_state["offhand_type"]
+	local oh_pwr = player_state["offhand_power"]
+	local dw_dmg = {}
+	if oh_type == "melee" or oh_type == "ranged" then
+		for dmg = math.ceil(oh_pwr / 10), math.ceil(oh_pwr / 5) do
+			table.insert(dw_dmg, dmg)
+		end
+	else
+		table.insert(dw_dmg, 0)
+	end
 
 	local function a_melee_dmg_quantum(x, crit)
 		local crit_mult = 1
@@ -57,16 +69,24 @@ function melee_damage(player_state, skill, monster_stats)
 				+ (crit_mult * skill["weapon_dmg_multiplier"] * x))
 				* (1 + player_state["percent_weapon_damage"]))
 				+ elemental_dmg
-				+ additional_dmg
 		return dmg
 	end
 
-	local normal_damages = {skill["name"] .. " damages:"}
-	local crit_damages = {skill["name"] .. " crit damages:"}
-	for dmg = math.ceil(mh_pwr / 10), math.ceil(mh_pwr / 5), 1 do
+	local mh_pwr = player_state["mainhand_power"]
+	for dmg = math.ceil(mh_pwr / 10), math.ceil(mh_pwr / 5) do
 		table.insert(normal_damages, a_melee_dmg_quantum(dmg, false))
 		table.insert(crit_damages, a_melee_dmg_quantum(dmg, true))
 	end
+
+	-- TODO figure out a good way to break add_skill_dmg down into
+	--	{hat_dmg, pants_dmg, shield_dmg, other_dmg}
+	for _, d_type in ipairs({dw_dmg, add_skill_dmg}) do
+		normal_damages = propagate(normal_damages, d_type)
+		crit_damages = propagate(crit_damages, d_type)
+	end
+
+	table.insert(normal_damages, 1, skill["name"] .. ":")
+	table.insert(crit_damages, 1, skill["name"] .. " crit:")
 	local damages = {["normal"] = normal_damages, ["crit"] = crit_damages}
 	return damages
 end
@@ -78,11 +98,12 @@ local function a_spell_dmg_quantum(player_state, skill, monster_stats, x, tuned_
 	end
 
 	local single_element_damage = {
-		cold = (player_state["cold_spell_damage"] or 0),
-		hot = (player_state["hot_spell_damage"] or 0),
-		sleaze = (player_state["sleaze_spell_damage"] or 0),
-		spooky = (player_state["spooky_spell_damage"] or 0),
-		stench = (player_state["stench_spell_damage"] or 0)
+		cold = player_state["cold_spell_damage"],
+		hot = player_state["hot_spell_damage"],
+		sleaze = player_state["sleaze_spell_damage"],
+		spooky = player_state["spooky_spell_damage"],
+		stench = player_state["stench_spell_damage"],
+		no_element = 0
 	}
 
 	local integer_spell_damage = 0
@@ -93,6 +114,10 @@ local function a_spell_dmg_quantum(player_state, skill, monster_stats, x, tuned_
 		end
 		integer_spell_damage = single_element_damage[tuned_element] + math.min(player_state["int_spell_damage"], skill["integer_bonus_dmg_cap"][which_cap])
 	elseif skill["cap_type"] == "Sauce" then
+		local is = 0
+		if player_state["intrinsically_spicy"] then
+			is = math.max(10, level())
+		end
 		integer_spell_damage = math.min(skill["integer_bonus_dmg_cap"][1], player_state["int_spell_damage"] + single_element_damage[tuned_element])
 	elseif skill["cap_type"] == "NoCap" then
 		integer_spell_damage = player_state["int_spell_damage"] + single_element_damage[tuned_element]
@@ -111,17 +136,19 @@ local function a_spell_dmg_quantum(player_state, skill, monster_stats, x, tuned_
 	return dmg
 end
 
-function spell_damage(player_state, skill, monster_stats)
+local function spell_damage(player_state, skill, monster_stats)
 	if skill["type"] ~= "spell" then
 		error("Not a valid spell damage skill: " .. skill["name"])
 	end
 
-	-- TODO this algorithm really really needs skill["name"] .. " damages: "d testing to see if a low dice roll for base_dmg overpowers a large single elemental damage bonus
+	-- TODO this algorithm really really needs more testing to see if a high dice roll for base_dmg (or a crit) overpowers a small single elemental damage bonus
 	local function sauce_tuned_to()
 		local avg_base_dmg = math.ceil((skill["base_dmg_min"] + skill["base_dmg_max"]) / 2)
 		local hypothetical_cold = a_spell_dmg_quantum(player_state, skill, monster_stats, avg_base_dmg, "cold", false)
 		local hypothetical_hot = a_spell_dmg_quantum(player_state, skill, monster_stats, avg_base_dmg, "hot", false)
 		local tuned = "no_element"
+		-- I'm not thrilled about this have_skill() check being internal rather than input
+		-- but it's kind of a low priority ;)
 		if have_skill("Immaculate Seasoning") then
 			if hypothetical_cold > hypothetical_hot then
 				tuned = "cold"
@@ -140,14 +167,14 @@ function spell_damage(player_state, skill, monster_stats)
 		poison_tuned = "no_element",
 		spirit_of_something = player_state["spirit_of_what"],
 		sleaze_tuned = "sleaze",
-		spooky_tune = "spooky",
+		spooky_tuned = "spooky",
 		stench_tuned = "stench"
 	}
 
 	local spell_tuned_to = tuning[skill["tunable_type"]]
 
-	local normal_damages = {skill["name"] .. " damages:"}
-	local crit_damages = {skill["name"] .. " crit damages:"}
+	local normal_damages = {skill["name"] .. ":"}
+	local crit_damages = {skill["name"] .. " crit:"}
 	for dmg = skill["base_dmg_min"], skill["base_dmg_max"], 1 do
 		table.insert(normal_damages, a_spell_dmg_quantum(player_state, skill, monster_stats, dmg, spell_tuned_to, false))
 		table.insert(crit_damages, a_spell_dmg_quantum(player_state, skill, monster_stats, dmg, spell_tuned_to, true))
@@ -165,5 +192,15 @@ function element_factor(dmg, element_a, element_b)
 		return dmg * 2
 	else
 		return dmg
+	end
+end
+
+function predict_damage(player_state, skill, monster_stats)
+	skill_data = get_skill_data(skill)
+	if skill_data["type"] == "spell" then
+		return spell_damage(player_state, skill_data, monster_stats)
+	elseif skill_data["type"] == "melee" then
+		return melee_damage(player_state, skill_data, monster_stats)
+	-- TODO elseif skill_data["type"] == "other" then
 	end
 end

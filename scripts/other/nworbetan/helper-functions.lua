@@ -23,6 +23,9 @@ function get_equipped_item(slot)
 end
 
 function get_weapon_reach(name)
+	if name == "current" then
+		name = get_equipped_item("weapon")
+	end
 	local wep_type = "unarmed"
 	if name ~= nil then
 		wep_type = maybe_get_itemdata(name)["weapon_reach"]
@@ -39,9 +42,14 @@ function get_item_power(name)
 end
 
 function get_offhand_type(name)
+	if name == "current" then
+		name = get_equipped_item("offhand")
+	end
 	local oh_type = "other"
 	if name == nil then
-		if get_weapon_reach(get_equipped_item("weapon")) == "unarmed" then
+		-- differentiating between an unarmed and empty offhand may be
+		-- overkill, idk, but it was possible to do, so I did it
+		if get_weapon_reach("current") == "unarmed" then
 			oh_type = "unarmed"
 		else
 			oh_type = "empty"
@@ -98,9 +106,9 @@ function get_current_player_state()
 		-- TODO does "Critical Hit %" need a helper in estimate_modifier_bonuses() ?
 		crit_melee_chance = estimated_bonuses["Critical Hit %"] or 0,
 		crit_multiplier = get_crit_multiplier(),
-		mainhand_type = get_weapon_reach(get_equipped_item("weapon")),
+		mainhand_type = get_weapon_reach("current"),
 		mainhand_power = get_item_power(get_equipped_item("weapon")),
-		offhand_type = get_offhand_type(get_equipped_item("offhand")),
+		offhand_type = get_offhand_type("current"),
 		offhand_power = get_item_power(get_equipped_item("offhand")),
 		int_spell_damage = estimated_bonuses["Spell Damage"] or 0,
 		percent_spell_damage = ((estimated_bonuses["Spell Damage %"] or 0) / 100),
@@ -112,6 +120,7 @@ function get_current_player_state()
 		-- TODO does "Critical Spell %" need a helper in estimate_modifier_bonuses() ?
 		crit_spell_chance = estimated_bonuses["Critical Spell %"] or 0,
 		spirit_of_what = get_pasta_tuning(),
+		intrinsically_spicy = have_skill("Intrinsic Spiciness"),
 		immaculately_seasoned = have_skill("Immaculate Seasoning"),
 		hero_of_the_half_shell = have_skill("Hero of the Half-Shell"),
 		damage_reduction = estimated_bonuses["Damage Reduction"] or 0,
@@ -120,26 +129,29 @@ function get_current_player_state()
 		hot_resistance = estimated_bonuses["Hot Resistance"] or 0,
 		sleaze_resistance = estimated_bonuses["Sleaze Resistance"] or 0,
 		spooky_resistance = estimated_bonuses["Spooky Resistance"] or 0,
-		stench_resistance = estimated_bonuses["Stench Resistance"] or 0}
+		stench_resistance = estimated_bonuses["Stench Resistance"] or 0
+	}
 	return state
 end
 
 function get_skill_data(name)
-	-- TODO sanity check name
 	local skills = datafile("combat-skills")
+	if not skills[name] then
+		error("unknown or invalid combat skill: " .. name)
+	end
 	return skills[name]
 end
 
 function get_monster_data(name)
-	-- HACK using get_monster_data() as a wrapper for getCurrentMonster()
-	--	this is because of lazyness more so than any other reason
 	local monster = {}
 	if name == "current" then
-		local cmd = getCurrentMonster()
+		-- TODO if currently_fighting() then
+		local cmd = getCurrentFightMonster()
 		monster = {
 			attack = cmd["Stats"]["ModAtk"],
 			defense = cmd["Stats"]["ModDef"],
 			hp = cmd["Stats"]["ModHP"],
+			-- HACK does the wiki have accurate init numbers?
 			initiative = 50,
 			element = cmd["Stats"]["Element"] or "no_element",
 			-- HACK can we get group size added to monsters.txt?
@@ -147,17 +159,20 @@ function get_monster_data(name)
 			phylum = cmd["Stats"]["Phylum"]
 		}
 	else
-		error("get_monster_data() is unfinished for non-current monsters")
+		-- TODO sanity check name?
+		local mdc = buildCurrentFightMonsterDataCache(name, "")
+		monster = {
+			attack = mdc["Stats"]["Atk"],
+			defense = mdc["Stats"]["Def"],
+			hp = mdc["Stats"]["HP"],
+			-- HACK does the wiki have accurate init numbers?
+			initiative = 50,
+			element = mdc["Stats"]["Element"] or "no_element",
+			-- HACK can we get group size added to monsters.txt?
+			group_size = 1,
+			phylum = mdc["Stats"]["Phylum"]
+		}
 	end
-	--[[local monster = {
-		attack = 100,
-		defense = 18,
-		hp = 100,
-		initiative = 50,
-		element = "no_element",
-		group_size = 1,
-		phylum = "hobo"
-	}]]
 	return monster
 end
 
@@ -165,19 +180,24 @@ function is_strong_against(elem_a, elem_b)
 	local t = {
 		sleaze = {
 			stench = true,
-			hot = true},
+			hot = true
+		},
 		stench = {
 			hot = true,
-			spooky = true},
+			spooky = true
+		},
 		hot = {
 			spooky = true,
-			cold = true},
+			cold = true
+		},
 		spooky = {
 			cold = true,
-			sleaze = true},
+			sleaze = true
+		},
 		cold = {
 			sleaze = true,
-			stench = true}
+			stench = true
+		}
 	}
 	if elem_a == "no_element" or elem_b == "no_element" then
 		return false
@@ -191,19 +211,24 @@ function is_weak_to(elem_a, elem_b)
 	local t = {
 		sleaze = {
 			spooky = true,
-			cold = true},
+			cold = true
+		},
 		stench = {
 			cold = true,
-			sleaze = true},
+			sleaze = true
+		},
 		hot = {
 			sleaze = true,
-			stench = true},
+			stench = true
+		},
 		spooky = {
 			stench = true,
-			hot = true},
+			hot = true
+		},
 		cold = {
 			hot = true,
-			spooky = true}
+			spooky = true
+		}
 	}
 	if elem_a == "no_element" or elem_b == "no_element" then
 		return false
@@ -213,9 +238,29 @@ function is_weak_to(elem_a, elem_b)
 	return false
 end
 
+function estimate_other_weapon_damage()
+	local w_d = 0
+	if get_weapon_reach("current") == "unarmed" then
+		if have_skill("Master of the Surprising Fist") then
+			w_d = w_d + 10
+		end
+		if have_intrinsic("Kung Fu Fighting") then
+			w_d = w_d + 3 * level()
+		end
+	end
+	return w_d
+end
+
 function estimate_other_weapon_damage_percent()
 	if moonsign("Mongoose") then
 		return 20
+	end
+	return 0
+end
+
+function estimate_other_spell_damage()
+	if get_pasta_tuning() ~= "no_element" then
+		return 10
 	end
 	return 0
 end
@@ -228,23 +273,77 @@ function estimate_other_spell_damage_percent()
 end
 
 function estimate_other_ranged_damage()
-	if have_skill("Disco Fever") and get_weapon_reach(get_equipped_item("weapon")) == "ranged" then
+	if have_skill("Disco Fever") and get_weapon_reach("current") == "ranged" then
 		return math.min(15, level())
 	end
 	return 0
 end
 
-function estimate_other_spell_damage()
-	if get_pasta_tuning() ~= "no_element" then
-		return 10
+function estimate_other_spooky_damage()
+	if have_intrinsic("A Little Bit Frightening") then
+		return 3 * level()
 	end
+	return 0
 end
 
---[[add_printer("/fight.php", function()
-	local numbers = melee_damage(get_current_player_state(), get_skill_data("Lunging Thrust-Smack"), get_monster_data("current"))
-	local function strung(table)
+-- FIXME can_use_skill() needs a *lot* of work still >_<
+function can_use_skill(skill, mid_fight)
+	local skill_data = get_skill_data(skill)
+	if skill == "Attack" then
+		-- TODO AoJ can't attack... right? what about cuncatitis? etc?
+		return true
+	end
+	-- TODO maybe move have_skill() checks to the data file?
+	--	or maybe that would be retarded?
+	if not have_skill(skill) and not skill:match("Combo$") then
+		return false
+	elseif skill:match("Combo$") then
+		if classid() ~= 2 then
+			return false
+		elseif skill:match("Head") and not have_skill("Headbutt") then
+			return false
+		elseif skill:match("Knee") and not have_skill("Kneebutt") then
+			return false
+		elseif skill:match("Shield") and not have_skill("Shieldbutt") then
+			return false
+		end
+	end
+	local cost = nil
+	if skill_data["mp_cost"][2] and classid() == skill_data["class"] then
+		cost = skill_data["mp_cost"][2]
+	else
+		cost = skill_data["mp_cost"][1]
+	end
+	-- TODO hmm, technically, mp restoring *is* allowed during combat...
+	if mid_fight and mp() < cost then
+		return false
+	end
+	local condition = "return " .. (skill_data["use_condition"] or "true")
+	--print("condition: " .. condition)
+	return setfenv(loadstring(condition), getfenv())()
+end
+
+-- NOTE everything from this point down is very ad-hoc and probably is not
+--	going to be a permanent part of anything at all
+
+function propagate(from_a, from_b)
+	local to = {}
+	for _, fa in ipairs(from_a) do
+		for _, fb in ipairs(from_b) do
+			table.insert(to, (fa + fb))
+		end
+	end
+	return to
+end
+
+function show_all_damages(monster)
+	local skd = datafile("combat-skills")
+	local plst = get_current_player_state()
+	local mnst = get_monster_data(monster)
+	local bigstring = ""
+	local function str(t)
 		local s = ""
-		for i, n in ipairs(table) do
+		for i, n in ipairs(t) do
 			local spacer = ", "
 			if i <= 2 then
 				spacer = " "
@@ -253,6 +352,151 @@ end
 		end
 		return s
 	end
+	for skill, _ in pairs(skd) do
+		if can_use_skill(skill, true) then
+			local numbers = predict_damage(plst, skill, mnst)
+			bigstring = bigstring .. str(numbers.normal) .. "<br>" .. str(numbers.crit) .. "<br>"
+		end
+	end
+	return bigstring
+end
+
+-- FIXME sort t by key or value, or possibly even code both and chose one by parameter
+function show_all_odds(monster)
+	local skd = datafile("combat-skills")
+	local plst = get_current_player_state()
+	local mnst = get_monster_data(monster)
+	local bigstring = ""
+	local function str(t)
+		local s = ""
+		for k, v in pairs(t) do
+			s = s .. k .. " (" .. v .. "), "
+		end
+		return s
+	end
+	for skill, _ in pairs(skd) do
+		if can_use_skill(skill, true) then
+			local numbers = predict_damage(plst, skill, mnst)
+			local norm = {}
+			for i = 2, #numbers.normal do
+				norm[i-1] = numbers.normal[i]
+			end
+			local crit = {}
+			for i = 2, #numbers.crit do
+				crit[i-1] = numbers.crit[i]
+			end
+			local odds = wato(norm, crit)
+			bigstring = bigstring .. numbers.normal[1] .. " " .. str(odds) .. "<br>"
+		end
+	end
+	return bigstring
+end
+
+-- FIXME averages won't even approach correctness until crit_xxxx_chance is accounted for, which doesn't happen yet
+function show_all_averages(monster)
+	local skd = datafile("combat-skills")
+	local plst = get_current_player_state()
+	local mnst = get_monster_data(monster)
+	local bigstring = ""
+	local function str(t)
+		local s = ""
+		for k, v in pairs(t) do
+			s = s .. k .. " (" .. v .. "), "
+		end
+		return s
+	end
+	for skill, _ in pairs(skd) do
+		if can_use_skill(skill, true) then
+			local numbers = predict_damage(plst, skill, mnst)
+			local norm = {}
+			for i = 2, #numbers.normal do
+				norm[i-1] = numbers.normal[i]
+			end
+			local crit = {}
+			for i = 2, #numbers.crit do
+				crit[i-1] = numbers.crit[i]
+			end
+			bigstring = bigstring .. numbers.normal[1] .. " " .. avg(wato(norm, crit)) .. "<br>"
+		end
+	end
+	return bigstring
+end
+
+--[[add_printer("/fight.php", function()
 	text = text:gsub("<div id='fightform' class='hideform'><p><center><table><a name=\"end\">",
-			function(x) return x .. strung(numbers.normal) .. "<br>" .. strung(numbers.crit) end)
+			function(x) return x .. show_all_damages("current") end)
 end)]]
+
+-- TODO apparently lots of turtle helmets have "special" damages?
+-- and odd numbered powers get an extra +1 max dmg... sometimes? always? what?
+-- http://kol.coldfront.net/thekolwiki/index.php/Headbutt
+function headbutt_dmg(helm)
+	if helm == "current" then
+		helm = get_equipped_item("hat")
+	end
+	local dmg = {}
+	local p = get_item_power(helm)
+	if have_skill("Tao of the Terrapin") then
+		p = 2 * p
+	end
+	for x = math.ceil(p / 10), math.ceil(p / 5) do
+		table.insert(dmg, x)
+	end
+	return dmg
+end
+
+-- TODO I think this is actually ready for testing, with a (very small but)
+--	greater than zero chance of being correct
+function kneebutt_dmg(pants)
+	if pants == "current" then
+		pants = get_equipped_item("pants")
+	end
+	local dmg = {}
+	local p = get_item_power(pants)
+	if have_skill("Tao of the Terrapin") then
+		p = 2 * p
+	end
+	for x = math.ceil(p / 10), math.ceil(p / 5) do
+		table.insert(dmg, x)
+	end
+	return dmg
+end
+
+-- the item powers returned by get_item_power() differ from the dmg numbers
+-- listed on http://kol.coldfront.net/thekolwiki/index.php/Shieldbutt
+-- TODO figure out exactly how wrong the wiki is, then fix it >_<
+function shieldbutt_dmg(shield)
+	if shield == "current" then
+		shield = get_equipped_item("offhand")
+	end
+	local dmg = {}
+	local p = get_item_power(shield)
+	for x = math.ceil(p / 10), math.ceil(p / 5) do
+		if shield == "polyalloy shield" then
+			x = x + 17
+		elseif shield == "spiky turtle shield" then
+			x = x * 2
+		end
+		table.insert(dmg, x)
+	end
+	return dmg
+end
+
+function wato(in_norm, in_crit)
+	local out_tab = {}
+	local weight = 1 / (#in_norm + #in_crit)
+	for _, tab in ipairs({in_norm, in_crit}) do
+		for _, x in ipairs(tab) do
+			out_tab[x] = (out_tab[x] or 0) + weight
+		end
+	end
+	return out_tab
+end
+
+function avg(tab)
+	local avg = 0
+	for value, weight in pairs(tab) do
+		avg = avg + (value * weight)
+	end
+	return avg
+end
