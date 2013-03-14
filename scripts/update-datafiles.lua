@@ -133,6 +133,8 @@ local function parse_mafia_bonuslist(bonuslist)
 		["MP Regen Min"] = "Regenerate minimum MP per adventure",
 		["MP Regen Max"] = "Regenerate maximum MP per adventure",
 
+		["Mana Cost"] = "Mana Cost",
+
 		-- TODO: add more modifiers
 		-- TODO: (Bonus for <class> only)
 	}

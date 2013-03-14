@@ -17,9 +17,8 @@ function get_equipped_item(slot)
 	local valid_slots = {"hat", "container", "weapon", "offhand", "pants", "acc1", "acc2", "acc3", "familiarequip"}
 	if array_contains_value(valid_slots, slot) then
 		return equipment()[slot]
-	else
-		error("Not a valid equipment slot: " .. slot)
 	end
+	error("Not a valid equipment slot: " .. slot)
 end
 
 function get_weapon_reach(name)
@@ -65,9 +64,18 @@ end
 function get_crit_multiplier()
 	if have_skill("Legendary Luck") then
 		return 4
-	else
-		return 2
 	end
+	return 2
+end
+
+function get_fumble_chance()
+	buffs = buffslist()
+	if buffs["Clumsy"] or buffs["QWOPPed Up"] then
+		return 1
+	end
+	-- HACK base chance needs spading
+	-- also, should this be handled in estimate_modifier_bonuses()?
+	return 0.05
 end
 
 function get_pasta_tuning()
@@ -81,9 +89,24 @@ function get_pasta_tuning()
 		return "spooky"
 	elseif have_intrinsic("Spirit of Bacon Grease") then
 		return "sleaze"
-	else
-		return "no_element"
 	end
+	return "no_element"
+end
+
+function get_phial_form()
+	buffs = buffslist()
+	if buffs["Coldform"] then
+		return "cold"
+	elseif buffs["Hotform"] then
+		return "hot"
+	elseif buffs["Sleazeform"] then
+		return "sleaze"
+	elseif buffs["Spookyform"] then
+		return "spooky"
+	elseif buffs["Stenchform"] then
+		return "stench"
+	end
+	return "no_element"
 end
 
 function get_current_player_state()
@@ -103,9 +126,10 @@ function get_current_player_state()
 		sleaze_weapon_damage = estimated_bonuses["Sleaze Damage"] or 0,
 		spooky_weapon_damage = estimated_bonuses["Spooky Damage"] or 0,
 		stench_weapon_damage = estimated_bonuses["Stench Damage"] or 0,
-		-- TODO does "Critical Hit %" need a helper in estimate_modifier_bonuses() ?
-		crit_melee_chance = estimated_bonuses["Critical Hit %"] or 0,
+		-- TODO does "Critical Hit %" need a helper in estimate_modifier_bonuses() instead of this +9?
+		crit_melee_chance = (((estimated_bonuses["Critical Hit %"] or 0) + 9) / 100),
 		crit_multiplier = get_crit_multiplier(),
+		fumble_chance = get_fumble_chance(),
 		mainhand_type = get_weapon_reach("current"),
 		mainhand_power = get_item_power(get_equipped_item("weapon")),
 		offhand_type = get_offhand_type("current"),
@@ -117,14 +141,15 @@ function get_current_player_state()
 		sleaze_spell_damage = estimated_bonuses["Damage to sleaze Spells"] or 0,
 		spooky_spell_damage = estimated_bonuses["Damage to spooky Spells"] or 0,
 		stench_spell_damage = estimated_bonuses["Damage to stench Spells"] or 0,
-		-- TODO does "Critical Spell %" need a helper in estimate_modifier_bonuses() ?
-		crit_spell_chance = estimated_bonuses["Critical Spell %"] or 0,
+		-- TODO does "Critical Spell %" need a helper in estimate_modifier_bonuses() instead of this +9?
+		crit_spell_chance = (((estimated_bonuses["Critical Spell %"] or 0) + 9) / 100),
 		spirit_of_what = get_pasta_tuning(),
 		intrinsically_spicy = have_skill("Intrinsic Spiciness"),
 		immaculately_seasoned = have_skill("Immaculate Seasoning"),
+		mp_cost_modifier = estimated_bonuses["Mana Cost"],
 		hero_of_the_half_shell = have_skill("Hero of the Half-Shell"),
 		damage_reduction = estimated_bonuses["Damage Reduction"] or 0,
-	-- TODO	phialForm :: Element,
+		phial_form = get_phial_form(),
 		cold_resistance = estimated_bonuses["Cold Resistance"] or 0,
 		hot_resistance = estimated_bonuses["Hot Resistance"] or 0,
 		sleaze_resistance = estimated_bonuses["Sleaze Resistance"] or 0,
@@ -156,7 +181,8 @@ function get_monster_data(name)
 			element = cmd["Stats"]["Element"] or "no_element",
 			-- HACK can we get group size added to monsters.txt?
 			group_size = 1,
-			phylum = cmd["Stats"]["Phylum"]
+			phylum = cmd["Stats"]["Phylum"],
+			physical_resistance = cmd["Stats"]["Phys"] or 0
 		}
 	else
 		-- TODO sanity check name?
@@ -170,7 +196,8 @@ function get_monster_data(name)
 			element = mdc["Stats"]["Element"] or "no_element",
 			-- HACK can we get group size added to monsters.txt?
 			group_size = 1,
-			phylum = mdc["Stats"]["Phylum"]
+			phylum = mdc["Stats"]["Phylum"],
+			physical_resistance = mdc["Stats"]["Phys"] or 0
 		}
 	end
 	return monster
@@ -290,9 +317,12 @@ end
 function can_use_skill(skill, mid_fight)
 	local skill_data = get_skill_data(skill)
 	if skill == "Attack" then
-		-- TODO AoJ can't attack... right? what about cuncatitis? etc?
+		if classid() == 14 then
+			return false
+		end
 		return true
 	end
+
 	-- TODO maybe move have_skill() checks to the data file?
 	--	or maybe that would be retarded?
 	if not have_skill(skill) and not skill:match("Combo$") then
@@ -308,16 +338,17 @@ function can_use_skill(skill, mid_fight)
 			return false
 		end
 	end
-	local cost = nil
-	if skill_data["mp_cost"][2] and classid() == skill_data["class"] then
-		cost = skill_data["mp_cost"][2]
-	else
-		cost = skill_data["mp_cost"][1]
+
+	local cost = skill_data["mp_cost"]
+	if skill_data["is_trivial_skill"] and classid() == skill_data["class"] then
+		cost = 0
 	end
+
 	-- TODO hmm, technically, mp restoring *is* allowed during combat...
 	if mid_fight and mp() < cost then
 		return false
 	end
+
 	local condition = "return " .. (skill_data["use_condition"] or "true")
 	--print("condition: " .. condition)
 	return setfenv(loadstring(condition), getfenv())()
@@ -341,82 +372,45 @@ function show_all_damages(monster)
 	local plst = get_current_player_state()
 	local mnst = get_monster_data(monster)
 	local bigstring = ""
-	local function str(t)
-		local s = ""
-		for i, n in ipairs(t) do
-			local spacer = ", "
-			if i <= 2 then
-				spacer = " "
-			end
-			s = s .. spacer .. n
-		end
-		return s
-	end
 	for skill, _ in pairs(skd) do
 		if can_use_skill(skill, true) then
 			local numbers = predict_damage(plst, skill, mnst)
-			bigstring = bigstring .. str(numbers.normal) .. "<br>" .. str(numbers.crit) .. "<br>"
+			local norm = numbers["name"] .. " norm: " .. table.concat(numbers["normal_dmg"], ", ")
+			local crit = numbers["name"] .. " crit: " .. table.concat(numbers["crit_dmg"], ", ")
+			bigstring = bigstring .. norm .. "<br>" .. crit .. "<br>"
 		end
 	end
 	return bigstring
 end
 
--- FIXME sort t by key or value, or possibly even code both and chose one by parameter
 function show_all_odds(monster)
 	local skd = datafile("combat-skills")
 	local plst = get_current_player_state()
 	local mnst = get_monster_data(monster)
 	local bigstring = ""
-	local function str(t)
-		local s = ""
-		for k, v in pairs(t) do
-			s = s .. k .. " (" .. v .. "), "
-		end
-		return s
-	end
 	for skill, _ in pairs(skd) do
 		if can_use_skill(skill, true) then
 			local numbers = predict_damage(plst, skill, mnst)
-			local norm = {}
-			for i = 2, #numbers.normal do
-				norm[i-1] = numbers.normal[i]
+			local odds = {}
+			-- TODO sort by k and/or v
+			for k, v in pairs(numbers["dmg_odds"]) do
+				table.insert(odds, "(" .. k .. ": " .. v .. ")")
 			end
-			local crit = {}
-			for i = 2, #numbers.crit do
-				crit[i-1] = numbers.crit[i]
-			end
-			local odds = wato(norm, crit)
-			bigstring = bigstring .. numbers.normal[1] .. " " .. str(odds) .. "<br>"
+			bigstring = bigstring .. numbers["name"] .. ": " .. table.concat(odds, ", ") .. "<br>"
 		end
 	end
 	return bigstring
 end
 
--- FIXME averages won't even approach correctness until crit_xxxx_chance is accounted for, which doesn't happen yet
 function show_all_averages(monster)
 	local skd = datafile("combat-skills")
 	local plst = get_current_player_state()
 	local mnst = get_monster_data(monster)
 	local bigstring = ""
-	local function str(t)
-		local s = ""
-		for k, v in pairs(t) do
-			s = s .. k .. " (" .. v .. "), "
-		end
-		return s
-	end
 	for skill, _ in pairs(skd) do
 		if can_use_skill(skill, true) then
 			local numbers = predict_damage(plst, skill, mnst)
-			local norm = {}
-			for i = 2, #numbers.normal do
-				norm[i-1] = numbers.normal[i]
-			end
-			local crit = {}
-			for i = 2, #numbers.crit do
-				crit[i-1] = numbers.crit[i]
-			end
-			bigstring = bigstring .. numbers.normal[1] .. " " .. avg(wato(norm, crit)) .. "<br>"
+			bigstring = bigstring .. numbers["name"] .. ": " .. numbers["mean_dmg"] .. "<br>"
 		end
 	end
 	return bigstring
@@ -482,13 +476,16 @@ function shieldbutt_dmg(shield)
 	return dmg
 end
 
-function wato(in_norm, in_crit)
+function wato(in_norm, in_crit, crit_chance)
 	local out_tab = {}
-	local weight = 1 / (#in_norm + #in_crit)
-	for _, tab in ipairs({in_norm, in_crit}) do
-		for _, x in ipairs(tab) do
-			out_tab[x] = (out_tab[x] or 0) + weight
-		end
+	-- TODO something like: norm_weight = (1 - fumble_chance - glance_chance - crit_chance) / #in_norm
+	local norm_weight = (1 - crit_chance) / #in_norm
+	local crit_weight = crit_chance / #in_crit
+	for _, x in ipairs(in_norm) do
+		out_tab[x] = (out_tab[x] or 0) + norm_weight
+	end
+	for _, x in ipairs(in_crit) do
+		out_tab[x] = (out_tab[x] or 0) + crit_weight
 	end
 	return out_tab
 end
@@ -500,3 +497,4 @@ function avg(tab)
 	end
 	return avg
 end
+
