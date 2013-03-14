@@ -1,0 +1,437 @@
+{
+"Attack": {
+	"name": "Attack",
+	"type": "melee",
+	"class": 0,
+	"mp_cost": 0,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 1
+},
+
+"Thrust-Smack": {
+	"name": "Thrust-Smack",
+	"type": "melee",
+	"class": 1,
+	"mp_cost": 3,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 2,
+	"use_condition": "get_weapon_reach(\"current\") ~= \"ranged\""
+},
+
+"Lunging Thrust-Smack": {
+	"name": "Lunging Thrust-Smack",
+	"type": "melee",
+	"class": 1,
+	"mp_cost": 8,
+	"skill_muscle_bonus": [1.25, 1.3],
+	"weapon_dmg_multiplier": 3,
+	"use_condition": "get_weapon_reach(\"current\") ~= \"ranged\""
+},
+
+"Bashing Slam Smash": {
+	"name": "Bashing Slam Smash",
+	"type": "melee",
+	"class": 1,
+	"mp_cost": 15,
+	"skill_muscle_bonus": [1.3999999],
+	"weapon_dmg_multiplier": 5
+},
+
+"Headbutt": {
+	"name": "Headbutt",
+	"type": "melee",
+	"class": 2,
+	"mp_cost": 3,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 1,
+	"use_condition": "get_weapon_reach(\"current\") ~= \"ranged\""
+},
+
+"Kneebutt": {
+	"name": "Kneebutt",
+	"type": "melee",
+	"class": 2,
+	"mp_cost": 4,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 1,
+	"use_condition": "get_weapon_reach(\"current\") ~= \"ranged\""
+},
+
+"Shieldbutt": {
+	"name": "Shieldbutt",
+	"type": "melee",
+	"class": 2,
+	"mp_cost": 5,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 1,
+	"use_condition": "get_offhand_type(\"current\") == \"shield\" and get_weapon_reach(\"current\") ~= \"ranged\""
+},
+
+"Head + Knee Combo": {
+	"name": "Head + Knee Combo",
+	"type": "melee",
+	"class": 2,
+	"mp_cost": 8,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 1,
+	"use_condition": "classid() == 2 and get_weapon_reach(\"current\") ~= \"ranged\" and have_skill(\"Headbutt\") and have_skill(\"Kneebutt\")"
+},
+
+"Head + Shield Combo": {
+	"name": "Head + Shield Combo",
+	"type": "melee",
+	"class": 2,
+	"mp_cost": 9,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 1,
+	"use_condition": "classid() == 2 and get_offhand_type(\"current\") == \"shield\" and get_weapon_reach(\"current\") ~= \"ranged\" and have_skill(\"Headbutt\") and have_skill(\"Shieldbutt\")"
+},
+
+"Knee + Shield Combo": {
+	"name": "Knee + Shield Combo",
+	"type": "melee",
+	"class": 2,
+	"mp_cost": 10,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 1,
+	"use_condition": "classid() == 2 and get_offhand_type(\"current\") == \"shield\" and get_weapon_reach(\"current\") ~= \"ranged\" and have_skill(\"Kneebutt\") and have_skill(\"Shieldbutt\")"
+},
+
+"Head + Knee + Shield Combo": {
+	"name": "Head + Knee + Shield Combo",
+	"type": "melee",
+	"class": 2,
+	"mp_cost": 13,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 1,
+	"use_condition": "classid() == 2 and get_offhand_type(\"current\") == \"shield\" and get_weapon_reach(\"current\") ~= \"ranged\" and have_skill(\"Headbutt\") and have_skill(\"Kneebutt\") and have_skill(\"Shieldbutt\")"
+},
+
+"Salsaball": {
+	"name": "Salsaball",
+	"type": "spell",
+	"class": 3,
+	"mp_cost": 1,
+	"is_trivial_skill": "true",
+	"base_dmg_min": 2,
+	"base_dmg_max": 3,
+	"myst_boost": 0,
+	"myst_boost_cap": 0,
+	"integer_bonus_dmg_cap": [5],
+	"cap_type": "Sauce",
+	"max_group_size": 1,
+	"tunable_type": "hot_tuned"
+},
+
+"Stream of Sauce": {
+	"name": "Stream of Sauce",
+	"type": "spell",
+	"class": 3,
+	"mp_cost": 3,
+	"base_dmg_min": 3,
+	"base_dmg_max": 4,
+	"myst_boost": 0.10,
+	"myst_boost_cap": 10,
+	"integer_bonus_dmg_cap": [10],
+	"cap_type": "Sauce",
+	"max_group_size": 1,
+	"tunable_type": "immaculate"
+},
+
+"Saucestorm": {
+	"name": "Saucestorm",
+	"type": "spell",
+	"class": 3,
+	"mp_cost": 10,
+	"base_dmg_min": 14,
+	"base_dmg_max": 18,
+	"myst_boost": 0.20,
+	"myst_boost_cap": 25,
+	"integer_bonus_dmg_cap": [15],
+	"cap_type": "Sauce",
+	"max_group_size": 1,
+	"tunable_type": "immaculate"
+},
+
+"Surge of Icing": {
+	"name": "Surge of Icing",
+	"type": "spell",
+	"class": 3,
+	"mp_cost": 10,
+	"base_dmg_min": 14,
+	"base_dmg_max": 18,
+	"myst_boost": 0.20,
+	"myst_boost_cap": 25,
+	"integer_bonus_dmg_cap": [15],
+	"cap_type": "Sauce",
+	"max_group_size": 1,
+	"tunable_type": "physical_tuned"
+},
+
+"K&auml;seso&szlig;esturm": {
+	"name": "K&auml;seso&szlig;esturm",
+	"type": "spell",
+	"class": 3,
+	"mp_cost": 10,
+	"base_dmg_min": 14,
+	"base_dmg_max": 18,
+	"myst_boost": 0.20,
+	"myst_boost_cap": 25,
+	"integer_bonus_dmg_cap": [15],
+	"cap_type": "Sauce",
+	"max_group_size": 1,
+	"tunable_type": "stench_tuned"
+},
+
+"Wave of Sauce": {
+	"name": "Wave of Sauce",
+	"type": "spell",
+	"class": 3,
+	"mp_cost": 16,
+	"base_dmg_min": 20,
+	"base_dmg_max": 24,
+	"myst_boost": 0.30,
+	"myst_boost_cap": 30,
+	"integer_bonus_dmg_cap": [25],
+	"cap_type": "Sauce",
+	"max_group_size": 2,
+	"tunable_type": "immaculate"
+},
+
+"Saucegeyser": {
+	"name": "Saucegeyser",
+	"type": "spell",
+	"class": 3,
+	"mp_cost": 28,
+	"base_dmg_min": 35,
+	"base_dmg_max": 45,
+	"myst_boost": 0.35,
+	"myst_boost_cap": null,
+	"integer_bonus_dmg_cap": [null],
+	"cap_type": "NoCap",
+	"max_group_size": 3,
+	"tunable_type": "immaculate"
+},
+
+"Saucemageddon": {
+	"name": "Saucemageddon",
+	"type": "spell",
+	"class": 3,
+	"mp_cost": 35,
+	"base_dmg_min": 60,
+	"base_dmg_max": 70,
+	"myst_boost": 0.40,
+	"myst_boost_cap": null,
+	"integer_bonus_dmg_cap": [null],
+	"cap_type": "NoCap",
+	"max_group_size": 3,
+	"tunable_type": "immaculate"
+},
+
+"Spaghetti Spear": {
+	"name": "Spaghetti Spear",
+	"type": "spell",
+	"class": 4,
+	"mp_cost": 1,
+	"is_trivial_skill": "true",
+	"base_dmg_min": 2,
+	"base_dmg_max": 3,
+	"myst_boost": 0,
+	"myst_boost_cap": 0,
+	"integer_bonus_dmg_cap": [5],
+	"cap_type": "Sauce",
+	"max_group_size": 1,
+	"tunable_type": "physical_tuned"
+},
+
+"Ravioli Shurikens": {
+	"name": "Ravioli Shurikens",
+	"type": "spell",
+	"class": 4,
+	"mp_cost": 4,
+	"base_dmg_min": 3,
+	"base_dmg_max": 8,
+	"myst_boost": 0.7,
+	"myst_boost_cap": 15,
+	"integer_bonus_dmg_cap": [20, 25],
+	"cap_type": "Pasta",
+	"max_group_size": 1,
+	"tunable_type": "spirit_of_something"
+},
+
+"Cannelloni Cannon": {
+	"name": "Cannelloni Cannon",
+	"type": "spell",
+	"class": 4,
+	"mp_cost": 6,
+	"base_dmg_min": 8,
+	"base_dmg_max": 16,
+	"myst_boost": 0.15,
+	"myst_boost_cap": 20,
+	"integer_bonus_dmg_cap": [35, 40],
+	"cap_type": "Pasta",
+	"max_group_size": 2,
+	"tunable_type": "spirit_of_something"
+},
+
+"Candyblast": {
+	"name": "Candyblast",
+	"type": "spell",
+	"class": 4,
+	"mp_cost": 6,
+	"base_dmg_min": 8,
+	"base_dmg_max": 16,
+	"myst_boost": 0.15,
+	"myst_boost_cap": 20,
+	"integer_bonus_dmg_cap": [35, 40],
+	"cap_type": "Pasta",
+	"max_group_size": 1,
+	"tunable_type": "physical_tuned"
+},
+
+"Stuffed Mortar Shell": {
+	"name": "Stuffed Mortar Shell",
+	"type": "spell",
+	"class": 4,
+	"mp_cost": 13,
+	"base_dmg_min": 16,
+	"base_dmg_max": 40,
+	"myst_boost": 0.25,
+	"myst_boost_cap": 30,
+	"integer_bonus_dmg_cap": [50, 60],
+	"cap_type": "Pasta",
+	"max_group_size": 3,
+	"tunable_type": "spirit_of_something"
+},
+
+"Stringozzi Serpent": {
+	"name": "Stringozzi Serpent",
+	"type": "spell",
+	"class": 4,
+	"mp_cost": 13,
+	"base_dmg_min": 16,
+	"base_dmg_max": 40,
+	"myst_boost": 0.25,
+	"myst_boost_cap": 30,
+	"integer_bonus_dmg_cap": [50, 60],
+	"cap_type": "Pasta",
+	"max_group_size": 1,
+	"tunable_type": "poison_tuned"
+},
+
+"Weapon of the Pastalord": {
+	"name": "Weapon of the Pastalord",
+	"type": "spell",
+	"class": 4,
+	"mp_cost": 24,
+	"base_dmg_min": 32,
+	"base_dmg_max": 64,
+	"myst_boost": 0.35,
+	"myst_boost_cap": null,
+	"integer_bonus_dmg_cap": [null],
+	"cap_type": "NoCap",
+	"max_group_size": 1,
+	"tunable_type": "spirit_of_something"
+},
+
+"Fearful Fettucini": {
+	"name": "Fearful Fettucini",
+	"type": "spell",
+	"class": 4,
+	"mp_cost": 24,
+	"base_dmg_min": 32,
+	"base_dmg_max": 64,
+	"myst_boost": 0.35,
+	"myst_boost_cap": null,
+	"integer_bonus_dmg_cap": [null],
+	"cap_type": "NoCap",
+	"max_group_size": 1,
+	"tunable_type": "spooky_tuned"
+},
+
+"Mighty Axing": {
+	"name": "Mighty Axing",
+	"type": "melee",
+	"class": 11,
+	"mp_cost": 0,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 2,
+	"use_condition": "get_equipped_item(\"weapon\") == 5552"
+},
+
+"Cleave": {
+	"name": "Cleave",
+	"type": "melee",
+	"class": 11,
+	"mp_cost": 5,
+	"skill_muscle_bonus": [1.0],
+	"weapon_dmg_multiplier": 5
+},
+
+"Curdle": {
+	"name": "Curdle",
+	"type": "jarlsberg",
+	"class": 14,
+	"mp_cost": 0
+},
+
+"Boil": {
+	"name": "Boil",
+	"type": "jarlsberg",
+	"class": 14,
+	"mp_cost": 5,
+	"base_dmg_min": 10,
+	"base_dmg_max": 15,
+	"myst_boost": 0.4,
+	"mp_cost_cap_multiplier": 10,
+	"element": "hot"
+},
+
+"Chop": {
+	"name": "Chop",
+	"type": "jarlsberg",
+	"class": 14,
+	"mp_cost": 5,
+	"base_dmg_min": 10,
+	"base_dmg_max": 15,
+	"myst_boost": 0.4,
+	"mp_cost_cap_multiplier": 10,
+	"element": "no_element"
+},
+
+"Freeze": {
+	"name": "Freeze",
+	"type": "jarlsberg",
+	"class": 14,
+	"mp_cost": 5,
+	"base_dmg_min": 10,
+	"base_dmg_max": 15,
+	"myst_boost": 0.4,
+	"mp_cost_cap_multiplier": 10,
+	"element": "cold"
+},
+
+"Slice": {
+	"name": "Slice",
+	"type": "jarlsberg",
+	"class": 14,
+	"mp_cost": 20,
+	"base_dmg_min": 40,
+	"base_dmg_max": 50,
+	"myst_boost": 0.3,
+	"mp_cost_cap_multiplier": 10,
+	"element": "no_element"
+},
+
+"Fry": {
+	"name": "Fry",
+	"type": "jarlsberg",
+	"class": 14,
+	"mp_cost": 20,
+	"base_dmg_min": 40,
+	"base_dmg_max": 50,
+	"myst_boost": 0.3,
+	"mp_cost_cap_multiplier": 10,
+	"element": "sleaze"
+}
+}
